@@ -1,0 +1,31 @@
+{
+  "_comment": "Copy this file to config/users/<username>.json and fill in all fields. Remove all _comment keys before use.",
+
+  "user": "<username>",
+  "profile": "agents/users/<username>.md",
+  "recipient_email": ["<recipient@example.com>"],
+
+  "date_window_days": 7,
+  "max_results_per_search": 12,
+  "sort": "pub_date",
+
+  "section_targets": {
+    "_comment": "min = minimum acceptable papers; do not pad below min with low-quality papers. max = cap per section. title = section header shown in the email.",
+    "cardiovascular": { "min": 4, "max": 8, "title": "Cardiovascular Research" },
+    "methodology":    { "min": 4, "max": 8, "title": "Methodology Developments" }
+  },
+
+  "searches": [
+    {
+      "_comment": "Each search is dispatched as a parallel PubMed query. Assign a unique single-letter id.",
+      "id": "A",
+      "label": "<human-readable label for this search>",
+      "query": "<PubMed query string — do NOT include date filters here; they are appended at runtime>"
+    },
+    {
+      "id": "B",
+      "label": "<label>",
+      "query": "<query>"
+    }
+  ]
+}

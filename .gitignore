@@ -1,0 +1,91 @@
+# =============================================================================
+# USER PROFILES & SEARCH CONFIGS — contain research identity and recipient info
+# =============================================================================
+
+agents/users/
+config/users/
+
+# =============================================================================
+# SECRETS & CREDENTIALS — never commit these
+# =============================================================================
+
+# Environment files (OAuth2 keys, sender/recipient addresses)
+.env
+.env.*
+!.env.example
+
+# Google OAuth / service account credential files
+*.credentials.json
+client_secret*.json
+service_account*.json
+*.token
+*.token.json
+token_cache/
+credentials/
+
+# =============================================================================
+# PROJECT OUTPUT — transient / potentially sensitive artifacts
+# =============================================================================
+
+# Failed email dumps written by send-email skill on retry failure
+output/
+
+# =============================================================================
+# PYTHON
+# =============================================================================
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+*.egg
+
+# =============================================================================
+# EDITORS & IDEs
+# =============================================================================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# =============================================================================
+# OPERATING SYSTEM
+# =============================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# =============================================================================
+# LOGS
+# =============================================================================
+
+*.log
+logs/
+
+# =============================================================================
+# CLAUDE CODE — tool result cache (not source, not secrets, but large/transient)
+# =============================================================================
+
+.claude/projects/
