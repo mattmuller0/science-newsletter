@@ -6,7 +6,7 @@ Produce a weekly research briefing email for a single user by searching PubMed f
 ## Runtime Environment
 - Working directory: project root (wherever this repo is checked out)
 - Skills live in `skills/`; user profiles in `agents/users/`; search configs in `config/users/`
-- Environment variables for Gmail OAuth2 are in `.env` (never committed)
+- Environment variables for Brevo are in `.env` (never committed)
 
 ## Execution Steps
 
@@ -23,7 +23,7 @@ Invoke skill: `skills/curate-and-summarize/SKILL.md`
 Invoke skill: `skills/compose-email/SKILL.md`
 
 ### Step 5 — Send email
-Invoke skill: `skills/send-email/SKILL.md`
+Invoke skill: `skills/brevo-send/SKILL.md`
 
 ## Error Handling
 - A search returning 0 results: skip silently; do not reduce section targets.

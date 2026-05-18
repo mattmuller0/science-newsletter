@@ -108,6 +108,6 @@ Rendered paper block:
 
 Return exactly:
 1. `subject` — the subject line string
-2. `html_body` — the complete rendered HTML string, ready to pass to `send-email`
+2. `html_body` — the complete rendered HTML string, ready to pass to `brevo-send`
 
 No other commentary. Do not summarize the papers again or explain what you produced.

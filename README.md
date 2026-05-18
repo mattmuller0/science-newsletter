@@ -28,7 +28,7 @@ Example entry:
 1. **Search** — Up to 10 configurable PubMed queries run in parallel subagents, each scoped to a date window (default: last 7 days).
 2. **Curate** — Papers are deduplicated, filtered for article type and abstract presence, then scored against your research profile.
 3. **Summarize** — Selected papers get 2–3 sentence technical summaries written to your specified style and audience level.
-4. **Deliver** — A styled HTML email is composed and sent via the Gmail API using OAuth2.
+4. **Deliver** — A styled HTML email is composed and sent via the Brevo transactional email API.
 
 All search queries, section targets, curation criteria, and recipient addresses live in config files — nothing is hardcoded.
 
@@ -37,8 +37,7 @@ All search queries, section targets, curation criteria, and recipient addresses 
 ## Prerequisites
 
 - A [Claude Code](https://claude.ai/code) account (or Claude Code CLI)
-- A Google account with Gmail that you will use as the **sender**
-- A Google Cloud project (free tier is sufficient)
+- A free [Brevo](https://www.brevo.com) account (for email sending)
 - Python 3 (stdlib only — no packages needed)
 
 ---
@@ -52,90 +51,28 @@ git clone <your-fork-url>
 cd science-newsletter
 ```
 
-### 2. Create a Google Cloud project and enable the Gmail API
+### 2. Set up Brevo for email sending
 
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) and create a new project.
-2. Navigate to **APIs & Services → Library**, search for **Gmail API**, and enable it.
-3. Navigate to **APIs & Services → OAuth consent screen**.
-   - Choose **External** user type.
-   - Fill in app name, support email, and developer contact (any values work for personal use).
-   - Add the scope `https://www.googleapis.com/auth/gmail.send`.
-   - Under **Test users**, add the Gmail address you will send from.
-   - Save. You do not need to publish the app — keeping it in Testing is fine for personal use (refresh tokens stay valid indefinitely while in Testing as long as you are a listed test user).
-4. Navigate to **APIs & Services → Credentials → Create Credentials → OAuth client ID**.
-   - Application type: **Desktop app**.
-   - Name it anything (e.g., `science-briefer`).
-   - Download the JSON — you need `client_id` and `client_secret` from it.
+1. Create a free account at [brevo.com](https://www.brevo.com).
+2. Go to **Senders & IP → Senders**, click **Add a sender**, enter the email address you want to send from, and click the verification link Brevo sends to that address.
+3. Go to **SMTP & API → API Keys**, click **Generate a new API key**, copy the key.
 
-### 3. Get a refresh token
-
-Run this script once from your terminal. It opens a browser to authorize your Gmail account and prints a refresh token you save in `.env`.
-
-```bash
-python3 - <<'EOF'
-import urllib.parse, urllib.request, json, webbrowser, http.server
-
-CLIENT_ID     = input("Client ID: ").strip()
-CLIENT_SECRET = input("Client Secret: ").strip()
-REDIRECT_URI  = "http://localhost:8080"
-SCOPE         = "https://www.googleapis.com/auth/gmail.send"
-
-auth_url = (
-    "https://accounts.google.com/o/oauth2/v2/auth?"
-    + urllib.parse.urlencode({
-        "client_id":     CLIENT_ID,
-        "redirect_uri":  REDIRECT_URI,
-        "response_type": "code",
-        "scope":         SCOPE,
-        "access_type":   "offline",
-        "prompt":        "consent",
-    })
-)
-
-print("\nOpening browser. If it opens the wrong Google account, copy the URL into an incognito window.\n")
-print(auth_url)
-webbrowser.open(auth_url)
-
-code = input("\nPaste the 'code' parameter from the redirect URL: ").strip()
-
-data = urllib.parse.urlencode({
-    "code":          code,
-    "client_id":     CLIENT_ID,
-    "client_secret": CLIENT_SECRET,
-    "redirect_uri":  REDIRECT_URI,
-    "grant_type":    "authorization_code",
-}).encode()
-
-req = urllib.request.Request(
-    "https://oauth2.googleapis.com/token", data=data, method="POST"
-)
-with urllib.request.urlopen(req) as resp:
-    tokens = json.loads(resp.read())
-
-print("\nRefresh token:", tokens.get("refresh_token", "(none — re-run with prompt=consent)"))
-EOF
-```
-
-After the browser authorization step, Google redirects to `http://localhost:8080?code=...`. Copy the `code` value from that URL and paste it when prompted.
-
-### 4. Create your `.env` file
+### 3. Create your `.env` file
 
 ```bash
 cp .env.example .env
 ```
 
-Fill in all four values:
+Fill in both values:
 
 ```
-GMAIL_CLIENT_ID=<your client_id>
-GMAIL_CLIENT_SECRET=<your client_secret>
-GMAIL_REFRESH_TOKEN=<your refresh_token>
-GMAIL_SENDER_EMAIL=<the Gmail address you authorized>
+BREVO_API_KEY=<your API key>
+BREVO_SENDER_EMAIL=<the address you verified in Brevo>
 ```
 
 `.env` is gitignored and never committed.
 
-### 5. Create your user config and profile
+### 4. Create your user config and profile
 
 ```bash
 cp templates/user-config.json config/users/<yourname>.json
@@ -149,7 +86,7 @@ Edit both files:
 
 Both files are gitignored and never committed.
 
-### 6. Install the skills into Claude Code
+### 5. Install the skills into Claude Code
 
 Copy the `skills/` directory into your Claude Code skills folder:
 
@@ -163,7 +100,7 @@ Or symlink it so edits to the repo are reflected immediately:
 ln -s "$(pwd)/skills/search-and-fetch"    ~/.claude/skills/search-and-fetch
 ln -s "$(pwd)/skills/curate-and-summarize" ~/.claude/skills/curate-and-summarize
 ln -s "$(pwd)/skills/compose-email"        ~/.claude/skills/compose-email
-ln -s "$(pwd)/skills/send-email"           ~/.claude/skills/send-email
+ln -s "$(pwd)/skills/brevo-send"           ~/.claude/skills/brevo-send
 ```
 
 ---
@@ -189,15 +126,13 @@ Claude.ai/code supports scheduled routines that run Claude automatically on a ca
 In your claude.ai/code project settings, open **Bash environment** and add:
 
 ```bash
-export GMAIL_CLIENT_ID="<your client_id>"
-export GMAIL_CLIENT_SECRET="<your client_secret>"
-export GMAIL_REFRESH_TOKEN="<your refresh_token>"
-export GMAIL_SENDER_EMAIL="<your sender address>"
+export BREVO_API_KEY="<your API key>"
+export BREVO_SENDER_EMAIL="<your sender address>"
 ```
 
 These are stored encrypted in your project and are not committed to the repo.
 
-The `send-email` skill sources `.env` if present, and falls back to the environment automatically — no changes to the skill are needed.
+The `brevo-send` skill sources `.env` if present, and falls back to the environment automatically — no changes to the skill are needed.
 
 ### Step 2 — Create a routine
 
@@ -241,7 +176,7 @@ That's it. Claude will search, curate, compose, and deliver the briefing on sche
 │   ├── search-and-fetch/         # PubMed search and metadata fetch
 │   ├── curate-and-summarize/     # Scoring, selection, and summarization
 │   ├── compose-email/            # HTML email rendering
-│   └── send-email/               # Gmail API delivery
+│   └── brevo-send/               # Brevo API delivery
 ├── templates/
 │   ├── user-config.json          # Starter template for config/users/<name>.json
 │   └── user-profile.md          # Starter template for agents/users/<name>.md
@@ -256,5 +191,5 @@ That's it. Claude will search, curate, compose, and deliver the briefing on sche
 
 - Credentials live in `.env` (local) or the claude.ai/code bash environment (cloud) — never in the repo.
 - User configs and profiles are gitignored — your email addresses and research identity stay local.
-- A pre-commit hook blocks accidental commits of email addresses or OAuth tokens.
-- The Gmail OAuth scope is limited to `gmail.send` — the app cannot read your inbox.
+- A pre-commit hook blocks accidental commits of email addresses or API keys.
+- The Brevo API key only authorizes sending — it cannot read email or access other services.

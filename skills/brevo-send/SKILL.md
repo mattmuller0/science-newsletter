@@ -1,6 +1,6 @@
 ---
-name: send-email
-description: Deliver the composed HTML email via the Gmail REST API using an OAuth2 refresh token; retry once on failure; save HTML fallback to output/ if both attempts fail
+name: brevo-send
+description: Deliver the composed HTML email via the Brevo transactional email API; retry once on failure; save HTML fallback to output/ if both attempts fail
 type: rigid
 tools: [Bash, Write]
 ---
@@ -15,7 +15,7 @@ This skill is **rigid** — follow the steps exactly. All credential handling go
 - `html_body` — complete HTML string (from `compose-email`)
 - `recipient_email` — string or list of strings from `config/users/<user>.json`
 
-**Script template:** `skills/send-email/send.py` — copy this file to `/tmp/send_briefing.py`, then substitute the three placeholders before executing.
+**Script template:** `skills/brevo-send/send.py` — copy this file to `/tmp/send_briefing.py`, then substitute the three placeholders before executing.
 
 **Output:** Confirmation of sent Message ID, or error with fallback path.
 
@@ -23,7 +23,7 @@ This skill is **rigid** — follow the steps exactly. All credential handling go
 
 ## Checklist
 Create these todos before starting:
-- [ ] Pre-flight: verify .env exists and GMAIL_REFRESH_TOKEN is non-empty
+- [ ] Pre-flight: verify .env exists and BREVO_API_KEY and BREVO_SENDER_EMAIL are non-empty
 - [ ] Write populated script to /tmp/send_briefing.py
 - [ ] Execute script
 - [ ] Confirm delivery or report error
@@ -39,7 +39,7 @@ Credentials can come from a local `.env` file (CLI use) or from environment vari
 [ -f .env ] && source .env
 
 # Verify the required variables are now set
-for var in GMAIL_CLIENT_ID GMAIL_CLIENT_SECRET GMAIL_REFRESH_TOKEN GMAIL_SENDER_EMAIL; do
+for var in BREVO_API_KEY BREVO_SENDER_EMAIL; do
   [ -n "${!var}" ] || { echo "ERROR: $var is not set. Add it to .env or the bash environment."; exit 1; }
 done
 ```
@@ -102,24 +102,24 @@ set -a && source .env && set +a && python /tmp/send_briefing.py
 
 **Successful output:**
 ```
-Sent. Message ID: 19dffe43a47878ff
+Sent. Message ID: <202405061234.abcd1234@smtp-relay.brevo.com>
 ```
 Report this Message ID to the user as confirmation of delivery.
 
 **Retry output (attempt 1 fails, attempt 2 succeeds):**
 ```
 Attempt 1 failed (HTTP 500), retrying...
-Sent. Message ID: 19dffe43a47878ff
+Sent. Message ID: <202405061234.abcd1234@smtp-relay.brevo.com>
 ```
 
 **Failure output (both attempts fail):**
 ```
 Attempt 1 failed (HTTP 401), retrying...
-Send failed after 2 attempts (HTTP 401): {"error": "invalid_grant", ...}
+Send failed after 2 attempts (HTTP 401): {"code": "unauthorized", ...}
 HTML saved to output/failed-2026-05-06.html
 ```
 
 Common failure causes:
-- `HTTP 401 / invalid_grant` → refresh token expired; re-run the token fetch script from setup docs
-- `HTTP 403 / insufficientPermissions` → OAuth scope missing `gmail.send`; re-authorize
+- `HTTP 401 / unauthorized` → API key invalid or missing; check `BREVO_API_KEY` in `.env`
+- `HTTP 403` → sender email not verified in Brevo; go to Senders & IP → Senders and confirm the address
 - `HTTP 429` → rate limit; wait a few minutes and retry manually
