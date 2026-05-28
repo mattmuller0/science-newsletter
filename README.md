@@ -28,7 +28,7 @@ Example entry:
 1. **Search** — Up to 10 configurable PubMed queries run in parallel subagents, each scoped to a date window (default: last 7 days).
 2. **Curate** — Papers are deduplicated, filtered for article type and abstract presence, then scored against your research profile.
 3. **Summarize** — Selected papers get 2–3 sentence technical summaries written to your specified style and audience level.
-4. **Deliver** — A styled HTML email is composed and sent via the Brevo transactional email API.
+4. **Deliver** — A styled HTML email is composed and saved as a Gmail draft via the Gmail MCP tool, ready to review and send.
 
 All search queries, section targets, curation criteria, and recipient addresses live in config files — nothing is hardcoded.
 
@@ -36,9 +36,7 @@ All search queries, section targets, curation criteria, and recipient addresses 
 
 ## Prerequisites
 
-- A [Claude Code](https://claude.ai/code) account (or Claude Code CLI)
-- A free [Brevo](https://www.brevo.com) account (for email sending)
-- Python 3 (stdlib only — no packages needed)
+- A [Claude Code](https://claude.ai/code) account (or Claude Code CLI) with the Gmail MCP connected
 
 ---
 
@@ -51,28 +49,11 @@ git clone <your-fork-url>
 cd science-newsletter
 ```
 
-### 2. Set up Brevo for email sending
+### 2. Connect the Gmail MCP
 
-1. Create a free account at [brevo.com](https://www.brevo.com).
-2. Go to **Senders & IP → Senders**, click **Add a sender**, enter the email address you want to send from, and click the verification link Brevo sends to that address.
-3. Go to **SMTP & API → API Keys**, click **Generate a new API key**, copy the key.
+In your Claude Code project settings, enable the **Gmail** MCP. This gives Claude the ability to create drafts in your Gmail account — no API keys or credentials needed.
 
-### 3. Create your `.env` file
-
-```bash
-cp .env.example .env
-```
-
-Fill in both values:
-
-```
-BREVO_API_KEY=<your API key>
-BREVO_SENDER_EMAIL=<the address you verified in Brevo>
-```
-
-`.env` is gitignored and never committed.
-
-### 4. Create your user config and profile
+### 3. Create your user config and profile
 
 ```bash
 cp templates/user-config.json config/users/<yourname>.json
@@ -97,10 +78,10 @@ cp -r skills/* ~/.claude/skills/
 Or symlink it so edits to the repo are reflected immediately:
 
 ```bash
-ln -s "$(pwd)/skills/search-and-fetch"    ~/.claude/skills/search-and-fetch
+ln -s "$(pwd)/skills/search-and-fetch"     ~/.claude/skills/search-and-fetch
 ln -s "$(pwd)/skills/curate-and-summarize" ~/.claude/skills/curate-and-summarize
 ln -s "$(pwd)/skills/compose-email"        ~/.claude/skills/compose-email
-ln -s "$(pwd)/skills/brevo-send"           ~/.claude/skills/brevo-send
+ln -s "$(pwd)/skills/gmail-draft"          ~/.claude/skills/gmail-draft
 ```
 
 ---
@@ -113,28 +94,15 @@ Open Claude Code in the project root and send:
 Run agents/science-briefer.md for user <yourname>.
 ```
 
-Claude will execute all steps end-to-end and confirm the sent Message ID when done.
+Claude will execute all steps end-to-end and confirm the Gmail draft ID when done. Open Gmail to review and send.
 
 ---
 
 ## Running as a weekly routine on claude.ai/code
 
-Claude.ai/code supports scheduled routines that run Claude automatically on a cadence. Because `.env` files are local, you supply your credentials through the bash environment instead.
+Claude.ai/code supports scheduled routines that run Claude automatically on a cadence. No credentials are needed — the Gmail MCP handles authentication.
 
-### Step 1 — Add credentials to the bash environment
-
-In your claude.ai/code project settings, open **Bash environment** and add:
-
-```bash
-export BREVO_API_KEY="<your API key>"
-export BREVO_SENDER_EMAIL="<your sender address>"
-```
-
-These are stored encrypted in your project and are not committed to the repo.
-
-The `brevo-send` skill sources `.env` if present, and falls back to the environment automatically — no changes to the skill are needed.
-
-### Step 2 — Create a routine
+### Create a routine
 
 In your claude.ai/code project, create a new routine with:
 
@@ -145,7 +113,7 @@ In your claude.ai/code project, create a new routine with:
 Run agents/science-briefer.md for user <yourname>.
 ```
 
-That's it. Claude will search, curate, compose, and deliver the briefing on schedule.
+Claude will search, curate, compose, and save a Gmail draft on schedule.
 
 ---
 
@@ -176,20 +144,16 @@ That's it. Claude will search, curate, compose, and deliver the briefing on sche
 │   ├── search-and-fetch/         # PubMed search and metadata fetch
 │   ├── curate-and-summarize/     # Scoring, selection, and summarization
 │   ├── compose-email/            # HTML email rendering
-│   └── brevo-send/               # Brevo API delivery
+│   └── gmail-draft/              # Gmail draft creation via MCP
 ├── templates/
 │   ├── user-config.json          # Starter template for config/users/<name>.json
 │   └── user-profile.md          # Starter template for agents/users/<name>.md
-├── output/                       # Failed-send fallbacks — gitignored
-├── .env                          # Credentials — gitignored
-└── .env.example                  # Template for .env
+└── output/                       # Generated artifacts — gitignored
 ```
 
 ---
 
 ## Security notes
 
-- Credentials live in `.env` (local) or the claude.ai/code bash environment (cloud) — never in the repo.
 - User configs and profiles are gitignored — your email addresses and research identity stay local.
-- A pre-commit hook blocks accidental commits of email addresses or API keys.
-- The Brevo API key only authorizes sending — it cannot read email or access other services.
+- No API keys or credentials are stored in the repo; Gmail access is handled entirely by the MCP.
