@@ -110,7 +110,11 @@ Claude.ai/code supports scheduled routines that run Claude automatically on a ca
 
 ### Keep your config out of the prompt
 
-Routine sessions start from a fresh checkout, and your config and profile are gitignored, so the run needs another way to get them. Fill in `templates/env-setup.sh` with the contents of your two files and paste it into the routine environment's setup script. It writes them to `~/.science-newsletter/`, which `agents/science-briefer.md` checks when the repo copies are missing (or set `SCIENCE_NEWSLETTER_HOME` to use another directory). Your email address and research profile then never appear in git or in the routine prompt.
+Routine sessions start from a fresh checkout, and your config and profile are gitignored, so the run needs another way to get them. Two options:
+
+**Google Drive (works for chat-based routines with no setup script).** Put your two files, as plain-text files titled `<yourname>.json` and `<yourname>.md`, in a Drive folder named `science-newsletter-config` (or name another folder in the routine prompt). With the Google Drive connector attached, `agents/science-briefer.md` reads them from there at the start of each run. Edit them in Drive to change your interests.
+
+**Environment setup script (code routines).** Fill in `templates/env-setup.sh` with the contents of your two files and paste it into the routine environment's setup script. It writes them to `~/.science-newsletter/`, which `agents/science-briefer.md` checks when the repo copies are missing (or set `SCIENCE_NEWSLETTER_HOME` to use another directory). Your email address and research profile then never appear in git or in the routine prompt.
 
 ### Create a routine
 
