@@ -8,7 +8,7 @@ never retyped by hand.
   {"sections": [{"key": "cardiovascular",
                  "papers": [{"id": "PMID:42081463", "summary": "IL-4 binds..."}]}]}
 
-  python3 render.py --config config/matt.json --candidates output/candidates.json \
+  python3 render.py --config config/matt.md --candidates output/candidates.json \
       --picks output/picks.json --out output/email.html
 
 Prints the subject line; writes the HTML body to --out.
@@ -19,6 +19,8 @@ import datetime as dt
 import html
 import json
 import sys
+
+from fetch import load_config
 
 NUMERALS = ["I", "II", "III", "IV", "V", "VI"]
 SOURCE_NAMES = {"pubmed": "PubMed (NLM/NCBI)", "biorxiv": "bioRxiv", "medrxiv": "medRxiv", "arxiv": "arXiv"}
@@ -64,7 +66,7 @@ def main():
         ap.add_argument(arg, required=True)
     a = ap.parse_args()
 
-    targets = json.load(open(a.config))["section_targets"]
+    targets = load_config(a.config)["section_targets"]
     papers = {p["id"]: p for p in json.load(open(a.candidates))}
     picks = {s["key"]: s["papers"] for s in json.load(open(a.picks))["sections"]}
 

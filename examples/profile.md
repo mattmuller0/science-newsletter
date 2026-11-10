@@ -35,3 +35,79 @@ Deprioritize: robotics or game applications with no transferable idea, LLM produ
 
 ## Summary style
 Dense technical prose for a graduate-level reader. Two sentences per paper (finding, then significance), plus a third only when it bears directly on [your active work, e.g. platelet results, ATAC-seq methods].
+
+## Settings
+Searches, sections and recipients for the briefing. Keep this as valid JSON inside the code block. Sections render in the order listed here and need a matching "Section" heading above.
+
+```json
+{
+  "recipient_email": [
+    "you@example.com"
+  ],
+  "date_window_days": 7,
+  "max_results_per_search": 12,
+  "section_targets": {
+    "domain": {
+      "min": 4,
+      "max": 8,
+      "title": "Cardiovascular Research"
+    },
+    "methods": {
+      "min": 4,
+      "max": 8,
+      "title": "Methodology Developments"
+    },
+    "frontier_ml": {
+      "min": 3,
+      "max": 6,
+      "title": "Frontier Machine Learning"
+    }
+  },
+  "searches": [
+    {
+      "id": "A",
+      "label": "Platelet biology",
+      "query": "(platelet OR thrombocyte) AND (activation OR transcriptome OR proteome OR single-cell) AND (thrombosis OR atherosclerosis OR cardiovascular)"
+    },
+    {
+      "id": "B",
+      "label": "Multi-omics integration",
+      "query": "(multi-omics OR multiomics OR integrative omics) AND (cardiovascular OR immune OR vascular)"
+    }
+  ],
+  "preprints": {
+    "biorxiv": {
+      "feeds": [
+        {
+          "id": "R1",
+          "server": "biorxiv",
+          "category": "bioinformatics"
+        },
+        {
+          "id": "R2",
+          "server": "medrxiv",
+          "category": "cardiovascular medicine",
+          "keep_all": true
+        }
+      ],
+      "keywords": [
+        "platelet*",
+        "multi-omic*",
+        "foundation model*",
+        "self-supervised",
+        "JEPA"
+      ]
+    },
+    "arxiv": {
+      "max_results_per_search": 30,
+      "searches": [
+        {
+          "id": "X1",
+          "label": "JEPA and predictive representation learning",
+          "query": "(abs:JEPA OR abs:\"joint embedding predictive\" OR abs:\"latent prediction\") ANDNOT (cat:cs.RO)"
+        }
+      ]
+    }
+  }
+}
+```

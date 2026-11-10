@@ -5,7 +5,9 @@ Runs every search in a user config against PubMed (NCBI E-utilities), bioRxiv an
 medRxiv (category feeds, keyword-filtered), and arXiv, then writes one deduplicated
 JSON list. Standard library only; no API keys.
 
-  python3 fetch.py --config config/matt.json --out output/candidates.json [--days 14]
+  python3 fetch.py --config config/matt.md --out output/candidates.json [--days 14]
+
+The config is the user's markdown profile; its settings are the first ```json block.
 """
 
 import argparse
@@ -26,6 +28,17 @@ ATOM = {"a": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/a
 EXCLUDED_TYPES = {"Letter", "Editorial", "Comment", "Case Reports", "Published Erratum",
                   "Retraction of Publication", "Retracted Publication", "News"}
 ABSTRACT_CHARS = 900
+
+
+def load_config(path):
+    """Settings from a profile .md (first ```json block), or from a plain .json file."""
+    text = open(path, encoding="utf-8").read()
+    if path.endswith(".json"):
+        return json.loads(text)
+    m = re.search(r"```json\s*\n(.*?)\n```", text, re.S)
+    if not m:
+        sys.exit(f"{path}: no ```json settings block found")
+    return json.loads(m.group(1))
 
 
 def get(url, tries=3):
@@ -212,7 +225,7 @@ def main():
     ap.add_argument("--days", type=int, help="override date_window_days")
     a = ap.parse_args()
 
-    cfg = json.load(open(a.config))
+    cfg = load_config(a.config)
     d1 = dt.date.today()
     d0 = d1 - dt.timedelta(days=a.days or cfg.get("date_window_days", 7))
     log, papers = [f"Window: {d0} to {d1}"], []
