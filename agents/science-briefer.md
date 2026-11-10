@@ -16,7 +16,7 @@ Locate the user's files, checking in this order and using the first location tha
 1. In the repo: `config/users/<user>.json` and `agents/users/<user>.md`
 2. In `$SCIENCE_NEWSLETTER_HOME` (if set), same relative paths
 3. In `~/.science-newsletter/`, same relative paths (this is where `templates/env-setup.sh` writes them)
-4. In Google Drive, when a Google Drive tool is available: in the folder the run prompt names (default title `science-newsletter-config`), find the files titled `<user>.json` and `<user>.md` with `search_files` (for example `title = '<user>.json' and trashed = false`, plus `parentId = '<folder id>'` once the folder is found) and read each with `read_file_content`. Write their text verbatim to the repo paths and confirm the JSON parses before continuing.
+4. In Google Drive, when a Google Drive tool is available: in the folder the run prompt names (default title `science-newsletter-config`), find the files titled `<user>.json` and `<user>.md` with `search_files` (for example `title = '<user>.json' and trashed = false`, plus `parentId = '<folder id>'` once the folder is found) and fetch each with `download_file_content` (it saves the file locally; copy that file into place). Do not rely on `read_file_content` for these: it can return empty text for plain-text uploads. Write their text verbatim to the repo paths and confirm the JSON parses before continuing.
 
 If found outside the repo, copy both into the repo paths (they are gitignored) so every skill reads them from one place. If neither file is found anywhere, stop: do not search, compose or send anything, and report which locations were checked.
 
