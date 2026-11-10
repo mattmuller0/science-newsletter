@@ -12,6 +12,13 @@ Produce a weekly research briefing email for a single user by searching PubMed f
 ## Execution Steps
 
 ### Step 1 — Load config and profile
+Locate the user's files, checking in this order and using the first location that has both:
+1. In the repo: `config/users/<user>.json` and `agents/users/<user>.md`
+2. In `$SCIENCE_NEWSLETTER_HOME` (if set), same relative paths
+3. In `~/.science-newsletter/`, same relative paths (this is where `templates/env-setup.sh` writes them)
+
+If found outside the repo, copy both into the repo paths (they are gitignored) so every skill reads them from one place. If neither file is found anywhere, stop: do not search, compose or send anything, and report which paths were checked.
+
 Read the user's JSON config (`config/users/<user>.json`) and their profile (`agents/users/<user>.md`). Hold both in context for all subsequent steps. The config supplies PubMed searches, preprint feeds and arXiv searches, date window, result limits, and section targets (an ordered list of sections). The profile supplies curation criteria per section and summary style.
 
 ### Step 2 — Search and fetch papers and preprints

@@ -108,6 +108,10 @@ Claude will execute all steps end-to-end and confirm the sent Gmail message ID w
 
 Claude.ai/code supports scheduled routines that run Claude automatically on a cadence. No credentials are needed — the Gmail MCP handles authentication.
 
+### Keep your config out of the prompt
+
+Routine sessions start from a fresh checkout, and your config and profile are gitignored, so the run needs another way to get them. Fill in `templates/env-setup.sh` with the contents of your two files and paste it into the routine environment's setup script. It writes them to `~/.science-newsletter/`, which `agents/science-briefer.md` checks when the repo copies are missing (or set `SCIENCE_NEWSLETTER_HOME` to use another directory). Your email address and research profile then never appear in git or in the routine prompt.
+
 ### Create a routine
 
 In your claude.ai/code project, create a new routine with:
@@ -156,6 +160,7 @@ Claude will search, curate, compose, and send the briefing on schedule.
 ├── scripts/
 │   └── fetch_preprints.py        # bioRxiv / medRxiv / arXiv fetcher (stdlib only)
 ├── templates/
+│   ├── env-setup.sh              # Environment setup script that writes your config for routines
 │   ├── user-config.json          # Starter template for config/users/<name>.json
 │   └── user-profile.md          # Starter template for agents/users/<name>.md
 └── output/                       # Generated artifacts — gitignored
