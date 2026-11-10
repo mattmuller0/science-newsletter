@@ -40,6 +40,19 @@ Select papers that meet ≥1 of the following:
 
 ---
 
+## Section III — Frontier Machine Learning
+(Optional. Include only if config `section_targets` has a third section.)
+Select papers that meet ≥1 of the following:
+- Introduces or analyzes a new representation-learning paradigm (e.g. joint-embedding predictive architectures, world models, self-supervised objectives)
+- Foundation model for [user's data types, e.g. omics, single-cell, biosignals, clinical records] with a methodological contribution
+- New architecture or training paradigm (e.g. state space models, flow matching, energy-based models, test-time training)
+- Interpretability method that could transfer to [user's models]
+- Plausibly transferable to [user's data and problems]
+
+**Deprioritize**: robotics or game-playing applications with no transferable idea, LLM product evaluations and chatbot safety audits, incremental benchmark entries
+
+---
+
 ## Summary Tone and Style
 - [Audience level, e.g. "Dense technical prose; assume a graduate-level reader"]
 - Two sentences per paper: S1 = core finding + experimental approach; S2 = methodological significance or translational relevance

@@ -1,8 +1,8 @@
 ---
 name: search-and-fetch
-description: Execute all PubMed searches from the user config in parallel subagents, deduplicate the returned PMIDs, and fetch full metadata for every unique paper
+description: Execute all PubMed searches from the user config in parallel subagents, fetch bioRxiv, medRxiv and arXiv preprints with scripts/fetch_preprints.py, deduplicate across sources, and produce one filtered candidate list
 type: rigid
-tools: [Agent, ToolSearch, TodoWrite]
+tools: [Agent, ToolSearch, TodoWrite, Bash]
 ---
 
 # Skill: Search and Fetch Papers
@@ -11,10 +11,10 @@ tools: [Agent, ToolSearch, TodoWrite]
 This skill is **rigid** — follow every step exactly. Deviation breaks downstream skills.
 
 **Inputs required in context before starting:**
-- User config JSON (`config/users/<user>.json`) — provides `searches`, `date_window_days`, `max_results_per_search`
+- User config JSON (`config/users/<user>.json`) — provides `searches`, `date_window_days`, `max_results_per_search`, and the optional `preprints` block
 - Today's date
 
-**Output:** A deduplicated, filtered list of paper metadata objects passed to `curate-and-summarize`.
+**Output:** A deduplicated, filtered list of paper metadata objects (peer-reviewed and preprint) passed to `curate-and-summarize`.
 
 ---
 
@@ -22,10 +22,12 @@ This skill is **rigid** — follow every step exactly. Deviation breaks downstre
 Create these todos before starting:
 - [ ] Resolve PubMed tool names
 - [ ] Compute date window
+- [ ] Start the preprint fetch (Step 6) in the background
 - [ ] Dispatch parallel search subagents
 - [ ] Deduplicate PMIDs
 - [ ] Fetch metadata in parallel batches
-- [ ] Filter and produce final list
+- [ ] Filter PubMed results
+- [ ] Collect preprints and merge across sources
 
 ---
 
@@ -56,6 +58,8 @@ Subtract `date_window_days` from today to get `date_from`. Format both as `YYYY/
 date_from = "2026/04/29"
 date_to   = "2026/05/06"
 ```
+
+If the config has a `preprints` block, start Step 6 now (Bash, `run_in_background: true`) so it runs while the PubMed subagents work. It uses the same window in `YYYY-MM-DD` form.
 
 ---
 
@@ -143,9 +147,9 @@ DOI:           10.1182/blood.2025031889
 
 ---
 
-## Step 5 — Filter
+## Step 5 — Filter PubMed results
 
-Drop any paper where:
+Drop any PubMed paper where:
 - Abstract is null, empty, or "No abstract available"
 - `article_types` contains any of: Letter, Editorial, Comment, Case Report, Published Erratum, Retraction
 
@@ -159,28 +163,58 @@ Drop any paper where:
 
 ---
 
+## Step 6 — Fetch preprints (bioRxiv, medRxiv, arXiv)
+
+Skip this step if the config has no `preprints` block.
+
+Run from the repo root (start it in the background during Step 1, collect it here):
+
+```bash
+mkdir -p output
+python3 scripts/fetch_preprints.py --config config/users/<user>.json \
+    --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD> --out output/preprints.json
+```
+
+The script reads `preprints.biorxiv.feeds` (bioRxiv and medRxiv category feeds, keyword-filtered on title and abstract unless a feed sets `keep_all`) and `preprints.arxiv.searches` (arXiv API queries; the submission-date window is appended automatically). It keeps only version 1 postings, so revisions of old preprints do not resurface, and it writes objects already in the output format below. Its stdout reports per-feed counts; keep that for the summary line.
+
+Load `output/preprints.json` with Bash (for example `python3 -c` printing id, venue, title and abstract per line) rather than reading the raw file into context.
+
+**If the script exits non-zero**, its log names the failed feeds; everything else in the file is still valid. For each failed source, try once:
+- bioRxiv/medRxiv: if a bioRxiv MCP tool is available (`ToolSearch` query "biorxiv search_preprints"), call `search_preprints` per failed feed with `date_from`/`date_to`, `server` and `category`, `limit: 100`, and apply the config keywords to titles and abstracts yourself.
+- arXiv: run `WebSearch` with `site:arxiv.org` plus the search's key terms and the current month, and keep only results submitted inside the window.
+If the fallback also fails, continue without that source and note it in the summary line. Never block the briefing on preprints.
+
+**Merge with PubMed results.** Drop a preprint when its DOI matches a PubMed paper's DOI, or when its lower-cased title (punctuation removed) matches a PubMed title; the peer-reviewed version wins. Combine `source_searches` when merging.
+
+---
+
 ## Output format
 
-Pass a list of objects to `curate-and-summarize`. Each object:
+Pass one list of objects to `curate-and-summarize`, PubMed papers and preprints together. Each object:
 ```
 {
-  pmid:          "42081463",
-  doi:           "10.1182/blood.2025031889",
+  id:            "PMID:42081463",            // or a bioRxiv DOI, or "arXiv:2611.12137"
+  source:        "pubmed",                    // pubmed | biorxiv | medrxiv | arxiv
+  doi:           "10.1182/blood.2025031889", // may be empty for arXiv
+  url:           "https://doi.org/10.1182/blood.2025031889",  // arXiv: https://arxiv.org/abs/<id>
   title:         "Inhibiting Thromboinflammation via...",
-  journal:       "Blood",
+  venue:         "Blood",                     // journal name, or "bioRxiv preprint" / "arXiv preprint (cs.LG)"
   authors:       "Lin S et al.",
   date:          "2026-05-04",
   abstract:      "Inflammation and coagulation are intricately linked...",
-  article_types: ["Journal Article"],
+  article_types: ["Journal Article"],          // ["Preprint"] for preprints
   source_searches: ["C"]
 }
 ```
 
-Also report: total PMIDs retrieved, duplicates removed, papers dropped in filter, **final count**.
+For PubMed papers, build `url` as `https://doi.org/<doi>` (or `https://pubmed.ncbi.nlm.nih.gov/<pmid>/` when there is no DOI) and set `venue` to the journal name.
+
+Also report: PubMed PMIDs retrieved, duplicates removed, papers dropped in filter, preprints per source, cross-source duplicates removed, **final count**.
 
 **Example summary line:**
 ```
-Searches: 10 dispatched, 9 returned results (A returned 0 — skipped)
+PubMed: 11 searches dispatched, 10 returned results (A returned 0 — skipped)
 PMIDs retrieved: 134 raw → 100 unique after dedup → 96 after filter
-Passing 96 papers to curate-and-summarize.
+Preprints: bioRxiv 69, medRxiv 29, arXiv 81 → 176 after removing 3 already in PubMed
+Passing 272 papers to curate-and-summarize.
 ```

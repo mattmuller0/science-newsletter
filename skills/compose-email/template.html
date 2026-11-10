@@ -22,54 +22,35 @@
     <tr>
       <td style="padding:32px 40px;max-width:700px;">
 
-        <!-- Section I header -->
+        <!-- ↓ Repeat this section block once per section, in config order ↓ -->
+        <!-- Section header. On every section after the first, add margin-top:12px; to this table's style. -->
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
           <tr>
             <td style="border-left:4px solid #c0392b;padding-left:12px;">
-              <h2 style="margin:0;font-size:13px;font-weight:normal;font-family:Arial,sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:#c0392b;">Section I &mdash; {{SECTION_I_TITLE}}</h2>
+              <h2 style="margin:0;font-size:13px;font-weight:normal;font-family:Arial,sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:#c0392b;">Section {{SECTION_NUMERAL}} &mdash; {{SECTION_TITLE}}</h2>
             </td>
           </tr>
         </table>
 
-        <!-- ↓ Repeat this block once per Section I paper ↓ -->
+        <!-- ↓ Repeat this block once per paper in the section ↓ -->
+        <!-- Last paper of the LAST section only: remove border-bottom and padding-bottom -->
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;border-bottom:1px solid #e0e0e0;padding-bottom:28px;">
           <tr>
             <td>
-              <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:15px;font-weight:bold;"><a href="https://doi.org/{{DOI}}" style="color:#1a2e4a;text-decoration:none;">{{PAPER_TITLE}}</a></p>
-              <p style="margin:0 0 10px;color:#666666;font-size:11px;font-family:Arial,sans-serif;">{{AUTHORS}} &nbsp;&nbsp;|&nbsp;&nbsp; {{JOURNAL}}, {{DATE_MONTH_YEAR}}</p>
+              <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:15px;font-weight:bold;"><a href="{{URL}}" style="color:#1a2e4a;text-decoration:none;">{{PAPER_TITLE}}</a></p>
+              <p style="margin:0 0 10px;color:#666666;font-size:11px;font-family:Arial,sans-serif;">{{AUTHORS}} &nbsp;&nbsp;|&nbsp;&nbsp; {{VENUE}}, {{DATE_MONTH_YEAR}}</p>
               <p style="margin:0;color:#333333;font-size:14px;line-height:1.7;font-family:Georgia,serif;">{{SUMMARY}}</p>
             </td>
           </tr>
         </table>
         <!-- ↑ End paper block ↑ -->
-
-        <!-- Section II header (margin-top:12px separates from last Section I paper) -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;margin-top:12px;">
-          <tr>
-            <td style="border-left:4px solid #c0392b;padding-left:12px;">
-              <h2 style="margin:0;font-size:13px;font-weight:normal;font-family:Arial,sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:#c0392b;">Section II &mdash; {{SECTION_II_TITLE}}</h2>
-            </td>
-          </tr>
-        </table>
-
-        <!-- ↓ Repeat this block once per Section II paper ↓ -->
-        <!-- Last paper in Section II: remove border-bottom and padding-bottom -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;border-bottom:1px solid #e0e0e0;padding-bottom:28px;">
-          <tr>
-            <td>
-              <p style="margin:0 0 4px;font-family:Georgia,serif;font-size:15px;font-weight:bold;"><a href="https://doi.org/{{DOI}}" style="color:#1a2e4a;text-decoration:none;">{{PAPER_TITLE}}</a></p>
-              <p style="margin:0 0 10px;color:#666666;font-size:11px;font-family:Arial,sans-serif;">{{AUTHORS}} &nbsp;&nbsp;|&nbsp;&nbsp; {{JOURNAL}}, {{DATE_MONTH_YEAR}}</p>
-              <p style="margin:0;color:#333333;font-size:14px;line-height:1.7;font-family:Georgia,serif;">{{SUMMARY}}</p>
-            </td>
-          </tr>
-        </table>
-        <!-- ↑ End paper block ↑ -->
+        <!-- ↑ End section block ↑ -->
 
         <!-- ── Footer ── -->
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:40px;border-top:1px solid #cccccc;padding-top:20px;">
           <tr>
             <td>
-              <p style="margin:0;color:#999999;font-size:11px;font-family:Arial,sans-serif;line-height:1.6;">Papers sourced from PubMed (NLM/NCBI). Publication dates reflect PubMed indexing and may differ from journal publication dates. This briefing was curated and composed by an AI assistant and has not been editorially reviewed.</p>
+              <p style="margin:0;color:#999999;font-size:11px;font-family:Arial,sans-serif;line-height:1.6;">{{SOURCES_NOTE}} This briefing was curated and composed by an AI assistant and has not been editorially reviewed.</p>
             </td>
           </tr>
         </table>

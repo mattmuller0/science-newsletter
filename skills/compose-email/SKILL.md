@@ -1,6 +1,6 @@
 ---
 name: compose-email
-description: Render curated Section I and Section II paper lists into a fully styled HTML email; output only the subject string and html_body string
+description: Render the curated section lists into a fully styled HTML email; output only the subject string and html_body string
 type: rigid
 tools: []
 ---
@@ -11,10 +11,10 @@ tools: []
 This skill is **rigid** — produce HTML that exactly matches `template.html` in this directory. Do not alter colors, fonts, layout structure, or inline style values. Consistency across weekly issues is the goal.
 
 **Inputs required in context before starting:**
-- Section I paper list with summaries (from `curate-and-summarize`)
-- Section II paper list with summaries (from `curate-and-summarize`)
+- One paper list with summaries per section, in config order (from `curate-and-summarize`)
+- Section titles (`section_targets.<key>.title` from config)
 - Today's date
-- Total paper count
+- Total paper count, and which sources contributed (PubMed, bioRxiv, medRxiv, arXiv)
 
 **Template file:** `skills/compose-email/template.html` — use this as the base; substitute all `{{TOKEN}}` placeholders.
 
@@ -31,7 +31,7 @@ Weekly Science Briefing — {Month} {D}, {YYYY} ({N} papers)
 
 **Example:**
 ```
-Weekly Science Briefing — May 6, 2026 (13 papers)
+Weekly Science Briefing — May 6, 2026 (17 papers)
 ```
 
 ---
@@ -41,13 +41,14 @@ Weekly Science Briefing — May 6, 2026 (13 papers)
 | Token | Value | Example |
 |-------|-------|---------|
 | `{{DATE_LONG}}` | Full date, no leading zero | `May 6, 2026` |
-| `{{N}}` | Total paper count (Section I + II) | `13` |
-| `{{SECTION_I_TITLE}}` | `section_targets.cardiovascular.title` from config | `Cardiovascular Research` |
-| `{{SECTION_II_TITLE}}` | `section_targets.methodology.title` from config | `Methodology Developments` |
+| `{{N}}` | Total paper count across all sections | `17` |
+| `{{SECTION_NUMERAL}}` | Roman numeral of the section in config order | `III` |
+| `{{SECTION_TITLE}}` | `section_targets.<key>.title` from config | `Frontier Machine Learning` |
 | `{{PAPER_TITLE}}` | Title-case, no trailing period | `CAMK2D Causes Heart Failure in Mice with RBM20 Cardiomyopathy` |
-| `{{DOI}}` | DOI string only, no URL prefix | `10.1038/s44161-026-00818-2` |
+| `{{URL}}` | The paper's `url` field (DOI link, or `https://arxiv.org/abs/<id>` for arXiv) | `https://doi.org/10.1038/s44161-026-00818-2` |
 | `{{AUTHORS}}` | Last FM et al. — or both names if exactly 2 | `van den Hoogenhof MMG et al.` |
-| `{{JOURNAL}}` | Journal name as returned by PubMed | `Nature Cardiovascular Research` |
+| `{{VENUE}}` | The paper's `venue` field: journal name, or the preprint label | `Nature Cardiovascular Research`, `bioRxiv preprint`, `arXiv preprint (cs.LG)` |
+| `{{SOURCES_NOTE}}` | One sentence naming the sources that contributed papers this issue | see below |
 | `{{DATE_MONTH_YEAR}}` | Month + year only | `May 2026` |
 | `{{SUMMARY}}` | S1 + S2 [+ S3] as one paragraph | *(see example below)* |
 
@@ -61,12 +62,19 @@ Weekly Science Briefing — May 6, 2026 (13 papers)
 
 ---
 
-## Repeat the paper block
+## Repeat the section and paper blocks
 
-The template contains one placeholder paper block per section. Repeat the block once per paper:
+The template contains one section block (a header plus one placeholder paper block). Repeat the whole section block once per section, in config order, and the paper block once per paper inside it:
 
-- **Section I:** Repeat the block between the Section I header and the Section II header.
-- **Section II:** Repeat the block after the Section II header. For the **last** paper in Section II, remove `border-bottom:1px solid #e0e0e0;padding-bottom:28px;` from the table's inline style.
+- On every section header after the first, add `margin-top:12px;` to the header table's style.
+- Skip a section entirely if it has zero papers.
+- For the **last** paper of the **last** section, remove `border-bottom:1px solid #e0e0e0;padding-bottom:28px;` from the table's inline style.
+
+**Sources note.** Name only the sources that actually contributed a paper this issue, then add the preprint caveat if any preprint is included. Example with all four:
+
+```
+Papers sourced from PubMed (NLM/NCBI), bioRxiv, medRxiv and arXiv. Publication dates reflect indexing or posting dates and may differ from journal publication dates. Preprints have not been peer reviewed.
+```
 
 ---
 
@@ -76,9 +84,9 @@ Input from `curate-and-summarize`:
 ```
 Title:   CAMK2D Causes Heart Failure in Mice with RBM20 Cardiomyopathy
 Authors: van den Hoogenhof MMG et al.
-Journal: Nature Cardiovascular Research
+Venue:   Nature Cardiovascular Research
 Date:    2026-05-04
-DOI:     10.1038/s44161-026-00818-2
+URL:     https://doi.org/10.1038/s44161-026-00818-2
 Summary: Pathogenic variants in RBM20, a cardiac splicing factor, cause severe
          dilated cardiomyopathy; this study demonstrates that CAMK2D is the
          downstream effector mediating RBM20-driven cardiac dysfunction in mice,
@@ -108,6 +116,6 @@ Rendered paper block:
 
 Return exactly:
 1. `subject` — the subject line string
-2. `html_body` — the complete rendered HTML string, ready to pass to `brevo-send`
+2. `html_body` — the complete rendered HTML string, ready to pass to `gmail-send`
 
 No other commentary. Do not summarize the papers again or explain what you produced.

@@ -1,18 +1,23 @@
 # Science Newsletter
 
-An automated weekly research briefing delivered to your inbox. Claude searches PubMed for recent papers, curates them against your research profile, writes dense technical summaries, and sends a styled HTML email — all from a single prompt or on a recurring schedule.
+An automated weekly research briefing delivered to your inbox. Claude searches PubMed for recent papers and bioRxiv, medRxiv and arXiv for recent preprints, curates them against your research profile, writes dense technical summaries, and sends a styled HTML email — all from a single prompt or on a recurring schedule.
 
 ---
 
 ## What it produces
 
-Each issue contains two sections configured to your interests:
+Each issue contains the sections you configure (two or more). The defaults are:
 
 **Section I — Cardiovascular Research** (or whatever domain you set)
 Papers selected from high-prestige journals, prioritizing mechanistic findings and omics data. Each entry includes authors, journal, publication month, a DOI link, and a 2–3 sentence technical summary.
 
 **Section II — Methodology Developments**
 Computational methods papers, single-cell and spatial atlases, and ML/genomics tools relevant to your active toolkit.
+
+**Section III — Frontier Machine Learning** (optional)
+New representation-learning paradigms (JEPA, world models, self-supervised objectives), foundation models for omics and clinical data, and new architectures or training methods, mostly from arXiv.
+
+Preprints appear in any section they qualify for and are labeled with their server (for example "bioRxiv preprint" or "arXiv preprint (cs.LG)").
 
 Example entry:
 
@@ -25,10 +30,10 @@ Example entry:
 
 ## How it works
 
-1. **Search** — Up to 10 configurable PubMed queries run in parallel subagents, each scoped to a date window (default: last 7 days).
-2. **Curate** — Papers are deduplicated, filtered for article type and abstract presence, then scored against your research profile.
+1. **Search** — Configurable PubMed queries run in parallel subagents, each scoped to a date window (default: last 7 days). At the same time `scripts/fetch_preprints.py` pulls bioRxiv and medRxiv category feeds (keyword-filtered) and runs configurable arXiv queries over the same window.
+2. **Curate** — Papers are deduplicated (a preprint already in PubMed is dropped in favor of the published version), filtered for article type and abstract presence, then scored against your research profile.
 3. **Summarize** — Selected papers get 2–3 sentence technical summaries written to your specified style and audience level.
-4. **Deliver** — A styled HTML email is composed and saved as a Gmail draft via the Gmail MCP tool, ready to review and send.
+4. **Deliver** — A styled HTML email is composed and sent via the Gmail MCP tool. If sending fails, it is saved as a draft instead.
 
 All search queries, section targets, curation criteria, and recipient addresses live in config files — nothing is hardcoded.
 
@@ -36,7 +41,8 @@ All search queries, section targets, curation criteria, and recipient addresses 
 
 ## Prerequisites
 
-- A [Claude Code](https://claude.ai/code) account (or Claude Code CLI) with the Gmail MCP connected
+- A [Claude Code](https://claude.ai/code) account (or Claude Code CLI) with the Gmail and PubMed MCPs connected
+- Python 3 (standard library only) and outbound access to api.biorxiv.org and export.arxiv.org for preprints
 
 ---
 
@@ -51,7 +57,7 @@ cd science-newsletter
 
 ### 2. Connect the Gmail MCP
 
-In your Claude Code project settings, enable the **Gmail** MCP. This gives Claude the ability to create drafts in your Gmail account — no API keys or credentials needed.
+In your Claude Code project settings, enable the **Gmail** and **PubMed** MCPs. Gmail lets Claude send the briefing from your account — no API keys or credentials needed. The bioRxiv MCP is optional; it is only used as a fallback if the bioRxiv API cannot be reached.
 
 ### 3. Create your user config and profile
 
@@ -62,7 +68,7 @@ cp templates/user-profile.md  agents/users/<yourname>.md
 
 Edit both files:
 
-- **`config/users/<yourname>.json`** — set your recipient email(s), date window, result limits, and PubMed search queries.
+- **`config/users/<yourname>.json`** — set your recipient email(s), date window, result limits, sections, PubMed search queries, and the optional `preprints` block (bioRxiv/medRxiv feeds and keywords, arXiv queries).
 - **`agents/users/<yourname>.md`** — describe your research focus, which journals to prioritize, and the curation criteria for each section.
 
 Both files are gitignored and never committed.
@@ -81,7 +87,7 @@ Or symlink it so edits to the repo are reflected immediately:
 ln -s "$(pwd)/skills/search-and-fetch"     ~/.claude/skills/search-and-fetch
 ln -s "$(pwd)/skills/curate-and-summarize" ~/.claude/skills/curate-and-summarize
 ln -s "$(pwd)/skills/compose-email"        ~/.claude/skills/compose-email
-ln -s "$(pwd)/skills/gmail-draft"          ~/.claude/skills/gmail-draft
+ln -s "$(pwd)/skills/gmail-send"           ~/.claude/skills/gmail-send
 ```
 
 ---
@@ -94,7 +100,7 @@ Open Claude Code in the project root and send:
 Run agents/science-briefer.md for user <yourname>.
 ```
 
-Claude will execute all steps end-to-end and confirm the Gmail draft ID when done. Open Gmail to review and send.
+Claude will execute all steps end-to-end and confirm the sent Gmail message ID when done.
 
 ---
 
@@ -113,7 +119,7 @@ In your claude.ai/code project, create a new routine with:
 Run agents/science-briefer.md for user <yourname>.
 ```
 
-Claude will search, curate, compose, and save a Gmail draft on schedule.
+Claude will search, curate, compose, and send the briefing on schedule.
 
 ---
 
@@ -121,13 +127,15 @@ Claude will search, curate, compose, and save a Gmail draft on schedule.
 
 | What to change | Where |
 |----------------|-------|
-| Search queries | `config/users/<you>.json` → `searches` array |
+| PubMed queries | `config/users/<you>.json` → `searches` array |
+| Preprint feeds and keywords | `config/users/<you>.json` → `preprints.biorxiv` |
+| arXiv queries | `config/users/<you>.json` → `preprints.arxiv.searches` |
 | Date window (default 7 days) | `config/users/<you>.json` → `date_window_days` |
-| Papers per section | `config/users/<you>.json` → `section_targets` |
-| Curation criteria | `agents/users/<you>.md` → Section I / Section II |
+| Sections and papers per section | `config/users/<you>.json` → `section_targets` |
+| Curation criteria | `agents/users/<you>.md` → one block per section |
 | Summary style and tone | `agents/users/<you>.md` → Summary Tone and Style |
 | Email template | `skills/compose-email/template.html` |
-| Recipients | `config/users/<you>.json` → `recipient_email` (string or list; all delivered via BCC) |
+| Recipients | `config/users/<you>.json` → `recipient_email` (string or list) |
 
 ---
 
@@ -141,10 +149,12 @@ Claude will search, curate, compose, and save a Gmail draft on schedule.
 ├── config/
 │   └── users/                    # Per-user search configs — gitignored
 ├── skills/
-│   ├── search-and-fetch/         # PubMed search and metadata fetch
+│   ├── search-and-fetch/         # PubMed search, preprint fetch, merge
 │   ├── curate-and-summarize/     # Scoring, selection, and summarization
 │   ├── compose-email/            # HTML email rendering
-│   └── gmail-draft/              # Gmail draft creation via MCP
+│   └── gmail-send/               # Send via Gmail MCP (draft fallback)
+├── scripts/
+│   └── fetch_preprints.py        # bioRxiv / medRxiv / arXiv fetcher (stdlib only)
 ├── templates/
 │   ├── user-config.json          # Starter template for config/users/<name>.json
 │   └── user-profile.md          # Starter template for agents/users/<name>.md
