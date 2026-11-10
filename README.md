@@ -1,178 +1,54 @@
 # Science Newsletter
 
-An automated weekly research briefing delivered to your inbox. Claude searches PubMed for recent papers and bioRxiv, medRxiv and arXiv for recent preprints, curates them against your research profile, writes dense technical summaries, and sends a styled HTML email — all from a single prompt or on a recurring schedule.
+A weekly research briefing that lands in your inbox. Every week Claude searches PubMed, bioRxiv, medRxiv and arXiv for new papers, picks the ones that matter for your research, writes a short technical summary of each, and emails you the result. It runs as a scheduled task in the cloud, so nothing needs to be installed or left running on your computer.
 
----
+## What you get
 
-## What it produces
-
-Each issue contains the sections you configure (two or more). The defaults are:
-
-**Section I — Cardiovascular Research** (or whatever domain you set)
-Papers selected from high-prestige journals, prioritizing mechanistic findings and omics data. Each entry includes authors, journal, publication month, a DOI link, and a 2–3 sentence technical summary.
-
-**Section II — Methodology Developments**
-Computational methods papers, single-cell and spatial atlases, and ML/genomics tools relevant to your active toolkit.
-
-**Section III — Frontier Machine Learning** (optional)
-New representation-learning paradigms (JEPA, world models, self-supervised objectives), foundation models for omics and clinical data, and new architectures or training methods, mostly from arXiv.
-
-Preprints appear in any section they qualify for and are labeled with their server (for example "bioRxiv preprint" or "arXiv preprint (cs.LG)").
-
-Example entry:
-
-> **Inhibiting Thromboinflammation via Interleukin-4 Binding to Platelet Glycoprotein VI and Suppression of Thrombosis**
-> Lin S et al.  |  Blood, May 2026
->
-> IL-4 directly binds platelet glycoprotein VI (GPVI) and suppresses thrombosis by dampening downstream platelet activation signaling, revealing an unexpected anti-thrombotic role for a cytokine studied primarily in allergic and Th2 immune contexts. This finding identifies GPVI as a molecular interface between inflammatory cytokine signaling and platelet function, with direct implications for understanding thromboinflammation in cardiovascular disease.
-
----
+A styled HTML email with a few sections you define. The defaults are Cardiovascular Research, Methodology Developments, and Frontier Machine Learning (JEPA, world models, foundation models and new architectures, mostly from arXiv). Each entry has the title linked to the paper, the authors, the venue, and a two or three sentence summary written for a graduate-level reader. Preprints are labeled as such.
 
 ## How it works
 
-1. **Search** — Configurable PubMed queries run in parallel subagents, each scoped to a date window (default: last 7 days). At the same time `scripts/fetch_preprints.py` pulls bioRxiv and medRxiv category feeds (keyword-filtered) and runs configurable arXiv queries over the same window.
-2. **Curate** — Papers are deduplicated (a preprint already in PubMed is dropped in favor of the published version), filtered for article type and abstract presence, then scored against your research profile.
-3. **Summarize** — Selected papers get 2–3 sentence technical summaries written to your specified style and audience level.
-4. **Deliver** — A styled HTML email is composed and sent via the Gmail MCP tool. If sending fails, it is saved as a draft instead.
+Claude follows [`BRIEFING.md`](BRIEFING.md), which has it:
 
-All search queries, section targets, curation criteria, and recipient addresses live in config files — nothing is hardcoded.
+1. Load your config and profile from a folder in your Google Drive.
+2. Run [`fetch.py`](fetch.py), which queries all four sources over the past week and writes one deduplicated candidate list. A preprint already published in PubMed is dropped in favor of the published version.
+3. Pick papers for each section against the criteria in your profile, and summarize them.
+4. Run [`render.py`](render.py) to build the email. It takes titles, authors and links straight from the fetched data, so they are never retyped.
+5. Send the email with the Gmail connector, falling back to a draft if sending fails.
 
----
+The two scripts use only the Python standard library and public APIs, with no keys required.
 
-## Prerequisites
+## Set it up
 
-- A [Claude Code](https://claude.ai/code) account (or Claude Code CLI) with the Gmail and PubMed MCPs connected
-- Python 3 (standard library only) and outbound access to api.biorxiv.org and export.arxiv.org for preprints
+You need a Claude account with scheduled tasks, and the **Gmail** and **Google Drive** connectors connected. The **PubMed** connector is a useful fallback but not required.
 
----
+**1. Create your config and profile.** Start from [`examples/config.json`](examples/config.json) and [`examples/profile.md`](examples/profile.md). The config holds your email address, your sections, your PubMed searches, the bioRxiv/medRxiv categories and keywords to watch, and your arXiv queries. The profile describes your research and gives the selection criteria and summary style for each section, with one `## Section …` block per section in the config, in the same order.
 
-## Setup
+**2. Put them in Google Drive.** Make a folder called `science-newsletter-config` and save the two files in it as plain text, named after you: for example `matt.json` and `matt.md`. Your email address and research profile stay private there, out of git and out of the task prompt.
 
-### 1. Clone and enter the repo
-
-```bash
-git clone <your-fork-url>
-cd science-newsletter
-```
-
-### 2. Connect the Gmail MCP
-
-In your Claude Code project settings, enable the **Gmail** and **PubMed** MCPs. Gmail lets Claude send the briefing from your account — no API keys or credentials needed. The bioRxiv MCP is optional; it is only used as a fallback if the bioRxiv API cannot be reached.
-
-### 3. Create your user config and profile
-
-```bash
-cp templates/user-config.json config/users/<yourname>.json
-cp templates/user-profile.md  agents/users/<yourname>.md
-```
-
-Edit both files:
-
-- **`config/users/<yourname>.json`** — set your recipient email(s), date window, result limits, sections, PubMed search queries, and the optional `preprints` block (bioRxiv/medRxiv feeds and keywords, arXiv queries).
-- **`agents/users/<yourname>.md`** — describe your research focus, which journals to prioritize, and the curation criteria for each section.
-
-Both files are gitignored and never committed.
-
-### 5. Install the skills into Claude Code
-
-Copy the `skills/` directory into your Claude Code skills folder:
-
-```bash
-cp -r skills/* ~/.claude/skills/
-```
-
-Or symlink it so edits to the repo are reflected immediately:
-
-```bash
-ln -s "$(pwd)/skills/search-and-fetch"     ~/.claude/skills/search-and-fetch
-ln -s "$(pwd)/skills/curate-and-summarize" ~/.claude/skills/curate-and-summarize
-ln -s "$(pwd)/skills/compose-email"        ~/.claude/skills/compose-email
-ln -s "$(pwd)/skills/gmail-send"           ~/.claude/skills/gmail-send
-```
-
----
-
-## Running manually
-
-Open Claude Code in the project root and send:
+**3. Create the scheduled task.** In Claude, create a weekly scheduled task with the Gmail and Google Drive connectors and a prompt like this, replacing `matt` with your file names:
 
 ```
-Run agents/science-briefer.md for user <yourname>.
+Run the weekly science briefing for user "matt" by following BRIEFING.md in the
+mattmuller0/science-newsletter repo. Clone it with
+`git clone --depth 1 https://github.com/mattmuller0/science-newsletter` if it is not
+already present. This is an unattended run: make every decision yourself, don't ask
+questions, and send the email when done.
 ```
 
-Claude will execute all steps end-to-end and confirm the sent Gmail message ID when done.
+That's it. To change what you get, edit the two files in Drive; the next run picks up the changes.
 
----
+## Tuning
 
-## Running as a weekly routine on claude.ai/code
+Change searches, sources or keywords in the config's `searches` and `preprints` blocks. PubMed queries use normal PubMed syntax without dates; arXiv queries use the arXiv API syntax (`abs:`, `cat:`, `AND`, `OR`, `ANDNOT`). bioRxiv and medRxiv can't be searched by keyword, so each category feed is pulled whole and kept only where the title or abstract matches one of your keywords, unless the feed sets `"keep_all": true`.
 
-Claude.ai/code supports scheduled routines that run Claude automatically on a cadence. No credentials are needed — the Gmail MCP handles authentication.
+Add, remove or resize sections in `section_targets`, keeping a matching block in the profile. Change what gets picked, or how summaries read, in the profile. Change the email's look in the HTML at the top of `render.py`.
 
-### Keep your config out of the prompt
-
-Routine sessions start from a fresh checkout, and your config and profile are gitignored, so the run needs another way to get them. Two options:
-
-**Google Drive (works for chat-based routines with no setup script).** Put your two files, as plain-text files titled `<yourname>.json` and `<yourname>.md`, in a Drive folder named `science-newsletter-config` (or name another folder in the routine prompt). With the Google Drive connector attached, `agents/science-briefer.md` reads them from there at the start of each run. Edit them in Drive to change your interests.
-
-**Environment setup script (code routines).** Fill in `templates/env-setup.sh` with the contents of your two files and paste it into the routine environment's setup script. It writes them to `~/.science-newsletter/`, which `agents/science-briefer.md` checks when the repo copies are missing (or set `SCIENCE_NEWSLETTER_HOME` to use another directory). Your email address and research profile then never appear in git or in the routine prompt.
-
-### Create a routine
-
-In your claude.ai/code project, create a new routine with:
-
-- **Schedule**: weekly (e.g., every Monday at 8 AM)
-- **Prompt**:
+## Files
 
 ```
-Run agents/science-briefer.md for user <yourname>.
+BRIEFING.md       Instructions Claude follows each week
+fetch.py          Collects candidates from PubMed, bioRxiv, medRxiv and arXiv
+render.py         Builds the HTML email from the picks
+examples/         Starter config and profile to copy into Drive
 ```
-
-Claude will search, curate, compose, and send the briefing on schedule.
-
----
-
-## Customization
-
-| What to change | Where |
-|----------------|-------|
-| PubMed queries | `config/users/<you>.json` → `searches` array |
-| Preprint feeds and keywords | `config/users/<you>.json` → `preprints.biorxiv` |
-| arXiv queries | `config/users/<you>.json` → `preprints.arxiv.searches` |
-| Date window (default 7 days) | `config/users/<you>.json` → `date_window_days` |
-| Sections and papers per section | `config/users/<you>.json` → `section_targets` |
-| Curation criteria | `agents/users/<you>.md` → one block per section |
-| Summary style and tone | `agents/users/<you>.md` → Summary Tone and Style |
-| Email template | `skills/compose-email/template.html` |
-| Recipients | `config/users/<you>.json` → `recipient_email` (string or list) |
-
----
-
-## Project structure
-
-```
-.
-├── agents/
-│   ├── science-briefer.md        # Orchestration agent
-│   └── users/                    # User profiles — gitignored
-├── config/
-│   └── users/                    # Per-user search configs — gitignored
-├── skills/
-│   ├── search-and-fetch/         # PubMed search, preprint fetch, merge
-│   ├── curate-and-summarize/     # Scoring, selection, and summarization
-│   ├── compose-email/            # HTML email rendering
-│   └── gmail-send/               # Send via Gmail MCP (draft fallback)
-├── scripts/
-│   └── fetch_preprints.py        # bioRxiv / medRxiv / arXiv fetcher (stdlib only)
-├── templates/
-│   ├── env-setup.sh              # Environment setup script that writes your config for routines
-│   ├── user-config.json          # Starter template for config/users/<name>.json
-│   └── user-profile.md          # Starter template for agents/users/<name>.md
-└── output/                       # Generated artifacts — gitignored
-```
-
----
-
-## Security notes
-
-- User configs and profiles are gitignored — your email addresses and research identity stay local.
-- No API keys or credentials are stored in the repo; Gmail access is handled entirely by the MCP.
